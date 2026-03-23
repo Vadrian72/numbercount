@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Star Counter</title>
+<title>Circle Counter</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; font-family: Georgia, serif; }
+  html, body { width: 100%; min-height: 100%; background: #fff; font-family: Georgia, serif; }
 
   #screen-input {
     display: flex;
@@ -18,22 +18,21 @@
   }
 
   #screen-input h1 {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: normal;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     color: #111;
   }
 
   #screen-input p {
-    font-size: 14px;
-    color: #888;
+    font-size: 13px;
+    color: #999;
     letter-spacing: 1px;
   }
 
   .input-row {
     display: flex;
     align-items: center;
-    gap: 0;
     border: 1.5px solid #111;
   }
 
@@ -47,27 +46,22 @@
     outline: none;
     background: #fff;
     color: #111;
-    padding: 0 12px;
   }
-
   #num-input::placeholder { color: #ccc; }
-
-  /* Chrome: hide arrows */
   #num-input::-webkit-outer-spin-button,
   #num-input::-webkit-inner-spin-button { -webkit-appearance: none; }
   #num-input[type=number] { -moz-appearance: textfield; }
 
   #go-btn {
-    width: 80px;
+    width: 72px;
     height: 48px;
-    font-size: 15px;
+    font-size: 14px;
     font-family: Georgia, serif;
     letter-spacing: 2px;
     background: #111;
     color: #fff;
     border: none;
     cursor: pointer;
-    transition: background 0.15s;
   }
   #go-btn:hover { background: #333; }
   #go-btn:active { background: #000; }
@@ -75,39 +69,30 @@
   #error-msg {
     font-size: 13px;
     color: #c00;
-    letter-spacing: 0.5px;
     min-height: 18px;
+    letter-spacing: 0.3px;
   }
 
   #screen-canvas {
     display: none;
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-  }
-
-  #star-canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
   #info-bar {
-    position: absolute;
-    bottom: 18px;
-    left: 50%;
-    transform: translateX(-50%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    padding: 10px 20px;
     display: flex;
     align-items: center;
-    gap: 20px;
-    background: rgba(255,255,255,0.92);
-    border: 1px solid #ddd;
-    padding: 8px 22px;
+    gap: 16px;
     font-size: 13px;
-    color: #555;
-    letter-spacing: 0.5px;
+    color: #666;
     font-family: Georgia, serif;
-    white-space: nowrap;
+    letter-spacing: 0.3px;
   }
 
   #back-btn {
@@ -117,28 +102,28 @@
     font-size: 13px;
     font-family: Georgia, serif;
     color: #111;
-    letter-spacing: 1px;
-    padding: 0;
     text-decoration: underline;
     text-underline-offset: 3px;
+    padding: 0;
+    margin-left: auto;
   }
-  #back-btn:hover { color: #555; }
+  #back-btn:hover { color: #666; }
 
-  #progress-bar {
-    position: absolute;
-    top: 0; left: 0;
-    height: 3px;
-    background: #111;
-    width: 0%;
-    transition: none;
+  #canvas-wrap {
+    flex: 1;
+    padding: 16px;
+  }
+
+  #dot-canvas {
+    display: block;
   }
 </style>
 </head>
 <body>
 
 <div id="screen-input">
-  <h1>★ STAR COUNTER</h1>
-  <p>câte steluțe vrei să vezi?</p>
+  <h1>● CIRCLE COUNTER</h1>
+  <p>câte cercuri vrei să vezi?</p>
   <div class="input-row">
     <input type="number" id="num-input" min="1" max="1000000" placeholder="100" />
     <button id="go-btn">GO</button>
@@ -147,108 +132,93 @@
 </div>
 
 <div id="screen-canvas">
-  <div id="progress-bar"></div>
-  <canvas id="star-canvas"></canvas>
   <div id="info-bar">
-    <span id="info-count">0 steluțe</span>
-    <span style="color:#ccc">|</span>
-    <span id="info-size"></span>
-    <span style="color:#ccc">|</span>
+    <span id="info-count"></span>
+    <span style="color:#ddd">|</span>
+    <span id="info-fits"></span>
     <button id="back-btn">← înapoi</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="dot-canvas"></canvas>
   </div>
 </div>
 
 <script>
 const inputScreen = document.getElementById('screen-input');
 const canvasScreen = document.getElementById('screen-canvas');
-const numInput    = document.getElementById('num-input');
-const goBtn       = document.getElementById('go-btn');
-const backBtn     = document.getElementById('back-btn');
-const errorMsg    = document.getElementById('error-msg');
-const canvas      = document.getElementById('star-canvas');
-const ctx         = canvas.getContext('2d');
-const infoCount   = document.getElementById('info-count');
-const infoSize    = document.getElementById('info-size');
-const progressBar = document.getElementById('progress-bar');
+const numInput     = document.getElementById('num-input');
+const goBtn        = document.getElementById('go-btn');
+const backBtn      = document.getElementById('back-btn');
+const errorMsg     = document.getElementById('error-msg');
+const canvas       = document.getElementById('dot-canvas');
+const ctx          = canvas.getContext('2d');
+const infoCount    = document.getElementById('info-count');
+const infoFits     = document.getElementById('info-fits');
+const canvasWrap   = document.getElementById('canvas-wrap');
 
-function drawStar(ctx, cx, cy, r) {
-  const spikes = 4;
-  const outer = r;
-  const inner = r * 0.45;
-  let rot = (Math.PI / spikes) - Math.PI / 2;
-  ctx.beginPath();
-  for (let i = 0; i < spikes * 2; i++) {
-    const rad = i % 2 === 0 ? outer : inner;
-    ctx.lineTo(cx + Math.cos(rot) * rad, cy + Math.sin(rot) * rad);
-    rot += Math.PI / spikes;
-  }
-  ctx.closePath();
-  ctx.fill();
-}
+// Fixed circle size: radius + gap
+const R    = 5;   // radius px
+const GAP  = 3;   // gap between circles px
+const CELL = R * 2 + GAP;
 
-function showStars(count) {
-  const W = window.innerWidth;
-  const H = window.innerHeight;
+function showCircles(count) {
+  // Available width = wrap padding accounted for
+  const availW = canvasWrap.clientWidth - 0; // full wrap width
+  const cols = Math.max(1, Math.floor(availW / CELL));
+  const rows = Math.ceil(count / cols);
+
+  const W = cols * CELL;
+  const H = rows * CELL;
+
   canvas.width  = W;
   canvas.height = H;
-
-  const area = W * H;
-  // Each star occupies roughly (2r+gap)^2 pixels
-  // We want count stars to fill the screen
-  const cellSize = Math.sqrt(area / count);
-  const r = Math.max(0.5, cellSize * 0.38);
-
-  const cols = Math.ceil(W / cellSize);
-  const rows = Math.ceil(H / cellSize);
-  const total = Math.min(count, cols * rows);
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
 
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#111';
 
-  const CHUNK = 20000;
+  const CHUNK = 50000;
   let drawn = 0;
 
+  // How many fit in viewport (info only)
+  const viewH = window.innerHeight - 60; // minus info bar
+  const fitsOnScreen = cols * Math.floor(viewH / CELL);
+
+  infoCount.textContent = count.toLocaleString('ro-RO') + ' cercuri';
+  if (count <= fitsOnScreen) {
+    infoFits.textContent = 'totul vizibil pe ecran';
+  } else {
+    infoFits.textContent = 'scroll pentru toate';
+  }
+
   function drawChunk() {
-    const end = Math.min(drawn + CHUNK, total);
+    const end = Math.min(drawn + CHUNK, count);
     for (let i = drawn; i < end; i++) {
       const col = i % cols;
       const row = Math.floor(i / cols);
-      const cx = (col + 0.5) * cellSize;
-      const cy = (row + 0.5) * cellSize;
-      if (r <= 0.8) {
-        ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
-      } else {
-        drawStar(ctx, cx, cy, r);
-      }
+      const cx = col * CELL + R + Math.floor(GAP / 2);
+      const cy = row * CELL + R + Math.floor(GAP / 2);
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, Math.PI * 2);
+      ctx.fill();
     }
     drawn = end;
-    progressBar.style.width = Math.round((drawn / total) * 100) + '%';
-
-    if (drawn < total) {
-      requestAnimationFrame(drawChunk);
-    } else {
-      progressBar.style.width = '0%';
-    }
+    if (drawn < count) requestAnimationFrame(drawChunk);
   }
-
-  const sizeLabel = r <= 0.8
-    ? 'pixeli (zoom in pentru a vedea)'
-    : `steluțe de ${(r * 2).toFixed(1)}px`;
-
-  infoCount.textContent = count.toLocaleString('ro-RO') + ' steluțe';
-  infoSize.textContent  = sizeLabel;
 
   requestAnimationFrame(drawChunk);
 }
 
 goBtn.addEventListener('click', () => {
   const val = parseInt(numInput.value);
-  if (!val || val < 1) { errorMsg.textContent = 'Introdu un număr mai mare ca 0.'; return; }
-  if (val > 1000000) { errorMsg.textContent = 'Maxim 1.000.000 steluțe.'; return; }
+  if (!val || val < 1)      { errorMsg.textContent = 'Introdu un număr mai mare ca 0.'; return; }
+  if (val > 1000000)        { errorMsg.textContent = 'Maxim 1.000.000 cercuri.'; return; }
   errorMsg.textContent = '';
   inputScreen.style.display = 'none';
-  canvasScreen.style.display = 'block';
-  showStars(val);
+  canvasScreen.style.display = 'flex';
+  window.scrollTo(0, 0);
+  setTimeout(() => showCircles(val), 30);
 });
 
 numInput.addEventListener('keydown', e => { if (e.key === 'Enter') goBtn.click(); });
@@ -258,13 +228,14 @@ backBtn.addEventListener('click', () => {
   inputScreen.style.display  = 'flex';
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   numInput.value = '';
+  window.scrollTo(0, 0);
   numInput.focus();
 });
 
 window.addEventListener('resize', () => {
-  if (canvasScreen.style.display === 'block') {
-    const val = parseInt(infoCount.textContent.replace(/\D/g,''));
-    if (val) showStars(val);
+  if (canvasScreen.style.display === 'flex') {
+    const val = parseInt(infoCount.textContent.replace(/\D/g, ''));
+    if (val) showCircles(val);
   }
 });
 </script>
